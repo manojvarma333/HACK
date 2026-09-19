@@ -1,0 +1,38 @@
+# --- Core web framework ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# --- Database / ORM ---
+SQLAlchemy==2.0.36
+
+# --- Validation / settings ---
+pydantic==2.10.4
+pydantic-settings==2.7.0
+email-validator==2.2.0
+
+# --- Auth / security ---
+PyJWT==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+
+# --- Product resolution (fuzzy matching) ---
+rapidfuzz==3.11.0
+
+# --- HTTP client (used by NLU/TTS providers) ---
+httpx==0.28.1
+
+# --- Testing ---
+pytest==8.3.4
+
+# =====================================================================
+# OPTIONAL AI DEPENDENCIES (Real Mode only).
+# The backend runs WITHOUT these in Simulation Mode. Install as needed:
+#
+#   Speech-to-text (choose ONE):
+#     pip install faster-whisper        # recommended, lighter, works on 3.13
+#     pip install openai-whisper        # reference impl (needs torch + ffmpeg)
+#
+#   NLU (Gemini):
+#     pip install google-generativeai
+# =====================================================================
