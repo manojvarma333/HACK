@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: voicestock-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.2
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      # SQLite on Render's free plan is ephemeral (resets on redeploy / idle
+      # spin-down) since the free plan does not support attached persistent
+      # disks. Upgrade the plan and add a `disks:` block + point DATABASE_URL
+      # at the mounted path for durable storage.
+      - key: DATABASE_URL
+        value: sqlite:///./data/voicestock.db
+      - key: CORS_ORIGINS
+        value: https://project-pinnamaraju-manoj-varmas-projects.vercel.app,http://localhost:5173,http://127.0.0.1:5173
+      - key: NLU_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        value: ""
+      - key: WHISPER_MODEL
+        value: ""
+      - key: MAX_AUDIO_MB
+        value: "15"
+      - key: DEFAULT_MODE
+        value: simulation
