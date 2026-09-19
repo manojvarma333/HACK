@@ -1,9 +1,22 @@
-import { Menu, Search, Bell, Sun, Moon } from 'lucide-react';
+import { Menu, Search, Bell, Sun, Moon, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const initials = user?.name
+    ? user.name.trim().split(/\s+/).slice(0, 2).map((n) => n[0]?.toUpperCase()).join('')
+    : '?';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <header className="sticky top-0 z-20 h-16 bg-white/80 dark:bg-gray-950/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 sm:px-6">
@@ -33,12 +46,19 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         </button>
         <div className="flex items-center gap-2.5 pl-2 ml-1 border-l border-gray-200 dark:border-gray-800">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-teal-500 flex items-center justify-center text-white font-semibold text-sm">
-            RK
+            {initials}
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">Ravi Kumar</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">Krishna Stores</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{user?.name ?? 'Guest'}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{user?.shop_name ?? ''}</p>
           </div>
+          <button
+            onClick={handleLogout}
+            title="Log out"
+            className="text-gray-500 dark:text-gray-400 hover:text-error-500 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <LogOut className="w-[18px] h-[18px]" />
+          </button>
         </div>
       </div>
     </header>

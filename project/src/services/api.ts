@@ -212,6 +212,14 @@ export interface ApiVoiceHistory {
   created_at: string;
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  shop_name: string;
+  role: string;
+}
+
 export interface NewProductInput {
   name: string;
   name_local?: string;
@@ -330,7 +338,7 @@ export const api = {
 
   auth: {
     login: (email: string, password: string) =>
-      request<{ access_token: string; user: unknown }>('/api/auth/login', {
+      request<{ access_token: string; user: AuthUser }>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
@@ -341,10 +349,11 @@ export const api = {
       confirm_password: string;
       shop_name: string;
     }) =>
-      request<{ access_token: string; user: unknown }>('/api/auth/register', {
+      request<{ access_token: string; user: AuthUser }>('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-    me: () => request<{ id: string; name: string; email: string; shop_name: string }>('/api/auth/me'),
+    me: () => request<AuthUser>('/api/auth/me'),
+    logout: () => request<{ success: boolean }>('/api/auth/logout', { method: 'POST' }),
   },
 };
