@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Anchor the default SQLite DB to the backend directory so the same database is
+# used no matter which working directory the server is launched from.
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+_DEFAULT_DB_URL = f"sqlite:///{(_BACKEND_ROOT / 'data' / 'voicestock.db').as_posix()}"
 
 
 class Settings(BaseSettings):
@@ -18,7 +24,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 1440
 
     # Database
-    database_url: str = "sqlite:///./data/voicestock.db"
+    database_url: str = _DEFAULT_DB_URL
 
     # CORS
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
