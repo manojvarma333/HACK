@@ -269,6 +269,7 @@ function AddProductModal({ onClose, onDone }: {
     opening_stock: 0, min_stock: 0, critical_stock: 0, purchase_price: 0, selling_price: 0,
   });
   const [busy, setBusy] = useState(false);
+  const [aliasText, setAliasText] = useState('');
   const set = (k: keyof NewProductInput, v: string) =>
     setForm((f) => ({ ...f, [k]: ['name', 'name_local', 'category', 'base_unit', 'default_unit'].includes(k) ? v : Number(v) }));
 
@@ -279,7 +280,16 @@ function AddProductModal({ onClose, onDone }: {
     }
     setBusy(true);
     try {
-      await api.products.create({ ...form, default_unit: form.base_unit });
+      // Aliases = user-entered spoken names + the local name, so the voice
+      // assistant can resolve this product in any language from now on.
+      const aliases = Array.from(
+        new Set(
+          [...aliasText.split(','), form.name_local ?? '']
+            .map((s) => s.trim())
+            .filter(Boolean),
+        ),
+      );
+      await api.products.create({ ...form, default_unit: form.base_unit, aliases });
       onDone(`Added product "${form.name}".`);
     } catch (err) {
       onDone(err instanceof ApiError ? err.message : 'Could not create product.', true);
@@ -300,6 +310,14 @@ function AddProductModal({ onClose, onDone }: {
         <Input label="Critical stock" type="number" value={String(form.critical_stock)} onChange={(e) => set('critical_stock', e.target.value)} />
         <Input label="Purchase price" type="number" value={String(form.purchase_price)} onChange={(e) => set('purchase_price', e.target.value)} />
         <Input label="Selling price" type="number" value={String(form.selling_price)} onChange={(e) => set('selling_price', e.target.value)} />
+      </div>
+      <div className="mt-3">
+        <Input
+          label="Other names for voice (comma separated — Hindi / Telugu / nicknames)"
+          placeholder="e.g. चावल, బియ్యం, chawal"
+          value={aliasText}
+          onChange={(e) => setAliasText(e.target.value)}
+        />
       </div>
       <div className="flex justify-end gap-2 mt-5">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
