@@ -27,9 +27,9 @@ ALLOWED_INTENTS = {
 }
 
 # --- Rule-based lexicons (English + Hindi + Telugu, romanized + script) ---
-_ADD_WORDS = ["add", "daal", "daalo", "cheyyi", "add cheyyi", "add karo", "jodo", "जोड़", "చేయి", "కలుపు"]
-_REMOVE_WORDS = ["remove", "nikaal", "nikalo", "teyyi", "hटा", "हटा", "kam karo", "తీసేయి", "తీయి", "minus", "sold", "sale"]
-_QUERY_WORDS = ["how much", "how many", "kitna", "kitne", "entha", "stock", "left", "remaining", "undi", "kya hai", "एंत", "ఎంత", "बचा"]
+_ADD_WORDS = ["add", "daal", "daalo", "cheyyi", "add cheyyi", "add karo", "jodo", "जोड़", "डाल", "डालो", "डालें", "जोड़ो", "बढ़ा", "चेयి", "చేయి", "కలుపు", "వేయి", "వెయ్యి"]
+_REMOVE_WORDS = ["remove", "nikaal", "nikalo", "teyyi", "hटा", "हटा", "हटाओ", "निकाल", "निकालो", "kam karo", "कम करो", "తీసేయి", "తీయి", "minus", "sold", "sale", "बेचा", "बिक"]
+_QUERY_WORDS = ["how much", "how many", "kitna", "kitne", "entha", "stock", "left", "remaining", "undi", "kya hai", "एंत", "ఎంత", "बचा", "कितना", "कितने", "कितनी", "बचे", "स्टॉक", "कहाँ"]
 _CORRECT_WORDS = ["correct", "actually", "set to", "make it", "should be", "asalu", "సరిచేయి", "सही करो"]
 _CANCEL_WORDS = ["cancel", "stop", "vaddu", "nahi", "no", "వద్దు", "नहीं", "रद्द"]
 _CONFIRM_WORDS = ["yes", "yeah", "yep", "okay", "ok", "confirm", "avunu", "haan", "haan ji", "అవును", "हाँ", "sahi"]
@@ -67,6 +67,15 @@ _UNIT_WORDS = [
     "packet", "packets", "pack", "box", "boxes", "carton", "cartons",
     "bag", "bags", "dozen", "quintal",
 ]
+
+# Non-Latin (Devanagari/Telugu) unit words mapped to canonical units. Used to
+# both detect the unit and strip it from the product term.
+_SCRIPT_UNITS = {
+    "किलो": "kg", "किलोग्राम": "kg", "ग्राम": "gram", "लीटर": "litre",
+    "पैकेट": "packet", "डिब्बा": "box", "बोरी": "bag", "कट्टा": "bag",
+    "दर्जन": "dozen", "ప్యాకెట్": "packet", "కిలో": "kg", "గ్రాము": "gram",
+    "లీటరు": "litre", "లీటర్": "litre", "కిలోలు": "kg", "బస్తా": "bag",
+}
 
 
 def _detect_language(text: str) -> str:
@@ -108,6 +117,9 @@ def _extract_unit(text: str) -> str | None:
     for u in _UNIT_WORDS:
         if re.search(rf"\b{re.escape(u)}\b", low):
             return u
+    for token, canonical in _SCRIPT_UNITS.items():
+        if token in text:
+            return canonical
     return None
 
 
@@ -120,9 +132,11 @@ def _extract_item(text: str, quantity: float | None, unit: str | None) -> str | 
         for w in group:
             stop.add(w)
     stop |= set(_NUM_WORDS)
+    stop |= set(_SCRIPT_UNITS)
     stop |= {"add", "of", "the", "to", "from", "do", "i", "have", "is", "are",
              "there", "please", "much", "many", "in", "my", "shop", "ka", "ki",
-             "ko", "na", "and", "a", "an"}
+             "ko", "na", "and", "a", "an", "karo", "cheyyi", "hai", "है", "है।",
+             "कितना", "कितने", "डालो", "डाल", "निकालो", "निकाल"}
     # remove numbers
     low = re.sub(r"\d+(?:\.\d+)?", " ", low)
     tokens = [t for t in re.split(r"[^\w\u0900-\u097F\u0C00-\u0C7F]+", low) if t]
