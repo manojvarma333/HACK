@@ -1,15 +1,15 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, Mic, Package, Tags, BarChart3, ArrowLeftRight,
-  Bell, BrainCircuit, History, Truck, ShoppingCart, Settings, HelpCircle,
+  LayoutDashboard, Mic, Package, BarChart3,
+  Bell, History, ShoppingCart, Settings,
   AudioLines, X,
 } from 'lucide-react';
 import { navItems } from '@/data/navigation';
 import { classNames } from '@/utils/format';
 
 const iconMap: Record<string, typeof LayoutDashboard> = {
-  LayoutDashboard, Mic, Package, Tags, BarChart3, ArrowLeftRight,
-  Bell, BrainCircuit, History, Truck, ShoppingCart, Settings, HelpCircle,
+  LayoutDashboard, Mic, Package, BarChart3,
+  Bell, History, ShoppingCart, Settings,
 };
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {

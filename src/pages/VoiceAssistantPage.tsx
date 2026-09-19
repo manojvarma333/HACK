@@ -74,18 +74,27 @@ function getSpeechRecognition(): SpeechRecognitionLike | null {
   return Ctor ? new Ctor() : null;
 }
 
+function isBrowserSpeechSupported(): boolean {
+  if (typeof window === 'undefined') return false;
+  const w = window as unknown as {
+    SpeechRecognition?: unknown;
+    webkitSpeechRecognition?: unknown;
+  };
+  return !!(w.SpeechRecognition || w.webkitSpeechRecognition);
+}
+
 export function VoiceAssistantPage() {
   const { mode, setMode, status } = useMode();
   const recorder = useVoiceRecorder();
   const speech = useSpeech();
+  const browserSpeechSupported = isBrowserSpeechSupported();
 
   const [voiceState, setVoiceState] = useState<VoiceState>('IDLE');
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [pending, setPending] = useState<VoiceProcessResponse | null>(null);
   const [autoSpeak, setAutoSpeak] = useState(true);
-  // Spoken language for the browser recognizer (Simulation Mode). Real Mode's
-  // Whisper auto-detects the language, so this only affects browser recognition.
+  // Spoken language for the browser speech recognizer (used in both modes).
   const [spokenLang, setSpokenLang] = useState('te-IN');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -200,7 +209,10 @@ export function VoiceAssistantPage() {
   }, [sessionId, mode, applyResult, handleError]);
 
   // ---- Microphone handling ----
-  const stopSimRecognition = () => {
+  // Browser Web Speech API is the primary transcription path in both modes.
+  // Server-side Whisper (startRealRecording) is only a fallback when the
+  // browser has no speech recognition.
+  const stopBrowserRecognition = () => {
     recognitionRef.current?.stop();
     recognitionRef.current = null;
   };
@@ -232,7 +244,7 @@ export function VoiceAssistantPage() {
     }
   };
 
-  const startSimRecognition = () => {
+  const startBrowserRecognition = () => {
     const rec = getSpeechRecognition();
     if (!rec) {
       inputRef.current?.focus();
@@ -241,7 +253,7 @@ export function VoiceAssistantPage() {
         {
           id: `hint-${Date.now()}`,
           role: 'assistant',
-          text: 'Speech recognition is not available in this browser. Please type your command, or switch to Real Mode to use server-side Whisper.',
+          text: 'Speech recognition is not available in this browser. Please type your command, or use a Chromium-based browser (Chrome/Edge).',
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -272,19 +284,25 @@ export function VoiceAssistantPage() {
   const onMicClick = () => {
     if (busy) return;
     if (micActive) {
-      if (mode === 'real') {
-        stopRealRecording();
-      } else {
-        stopSimRecognition();
+      // Stop whichever capture path is active.
+      if (recognitionRef.current) {
+        stopBrowserRecognition();
         setVoiceState('IDLE');
+      } else {
+        stopRealRecording();
       }
       return;
     }
-    if (mode === 'real') startRealRecording();
-    else startSimRecognition();
+    // Prefer the browser Web Speech API for transcription in both modes.
+    if (browserSpeechSupported) startBrowserRecognition();
+    else if (mode === 'real' && (status?.whisper_available ?? false)) startRealRecording();
+    else startBrowserRecognition(); // shows the unsupported hint
   };
 
-  const modeReady = mode === 'simulation' || (status?.whisper_available ?? false);
+  const modeReady =
+    mode === 'simulation' ||
+    browserSpeechSupported ||
+    (status?.whisper_available ?? false);
 
   return (
     <PageContainer>
@@ -333,10 +351,13 @@ export function VoiceAssistantPage() {
               <option value="auto">Auto-detect</option>
             </select>
           </label>
+          <Badge tone={browserSpeechSupported ? 'success' : 'warning'}>
+            {browserSpeechSupported ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+            Web Speech {browserSpeechSupported ? 'ready' : 'off'}
+          </Badge>
           {status && (
-            <Badge tone={status.whisper_available ? 'success' : 'warning'}>
-              {status.whisper_available ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-              Whisper {status.whisper_available ? 'ready' : 'off'}
+            <Badge tone={status.whisper_available ? 'success' : 'neutral'}>
+              Whisper {status.whisper_available ? 'ready' : 'fallback'}
             </Badge>
           )}
           {status && (
@@ -353,7 +374,7 @@ export function VoiceAssistantPage() {
 
       {mode === 'real' && !modeReady && (
         <div className="mb-4 rounded-lg border border-warning-300 bg-warning-50 dark:bg-warning-900/20 dark:border-warning-800 px-4 py-3 text-sm text-warning-800 dark:text-warning-300">
-          Real Mode needs a Whisper backend on the server. It isn't available right now, so voice transcription will fail — use Simulation Mode or type your command.
+          Voice input needs the browser Web Speech API or a server Whisper backend, and neither is available right now. Please type your command instead.
         </div>
       )}
 
@@ -507,8 +528,8 @@ export function VoiceAssistantPage() {
               </button>
             </div>
 
-            {/* Real waveform driven by mic amplitude (Real Mode). */}
-            {micActive && mode === 'real' && (
+            {/* Real waveform driven by mic amplitude (Whisper fallback recording). */}
+            {micActive && recorder.isRecording && (
               <div className="flex items-end gap-1 h-10 mt-4" aria-hidden>
                 {Array.from({ length: 24 }).map((_, i) => {
                   const base = recorder.amplitude;
@@ -519,7 +540,7 @@ export function VoiceAssistantPage() {
             )}
 
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-3">
-              {micActive ? 'Tap to stop' : mode === 'real' ? 'Tap to speak (records audio for Whisper)' : 'Tap to speak (browser recognition)'}
+              {micActive ? 'Tap to stop' : 'Tap to speak (browser recognition)'}
             </p>
             {recorder.error && <p className="text-center text-sm text-error-500 mt-1">{recorder.error}</p>}
           </div>

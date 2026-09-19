@@ -151,6 +151,82 @@ export interface VoiceStatus {
   default_mode: string;
 }
 
+export interface SupplierProduct {
+  id: string;
+  name: string;
+  name_local?: string | null;
+  category: string;
+  default_unit: string;
+  current_stock: number;
+  purchase_price: number;
+  selling_price: number;
+}
+
+export interface ApiSupplier {
+  id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  products: SupplierProduct[];
+}
+
+export interface PurchaseItemInput {
+  product_id: string;
+  quantity: number;
+  unit: string;
+  purchase_price: number;
+}
+
+export interface ApiPurchaseItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit: string;
+  purchase_price: number;
+}
+
+export interface ApiPurchase {
+  id: string;
+  supplier_id?: string | null;
+  supplier_name?: string | null;
+  total: number;
+  status: string;
+  notes?: string | null;
+  items: ApiPurchaseItem[];
+  created_at: string;
+}
+
+export interface ApiVoiceHistory {
+  id: string;
+  transcript: string;
+  intent?: string | null;
+  product_name?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  confidence?: number | null;
+  language?: string | null;
+  status: string;
+  response?: string | null;
+  created_at: string;
+}
+
+export interface NewProductInput {
+  name: string;
+  name_local?: string;
+  category: string;
+  base_unit: string;
+  default_unit: string;
+  opening_stock: number;
+  min_stock: number;
+  critical_stock: number;
+  purchase_price: number;
+  selling_price: number;
+  avg_daily_usage?: number;
+  aliases?: string[];
+}
+
 // --------------------------- API ---------------------------
 export const api = {
   health: () => request<{ status: string }>('/api/health'),
@@ -208,6 +284,11 @@ export const api = {
       return request<ApiProduct[]>(`/api/products${q ? `?${q}` : ''}`);
     },
     get: (id: string) => request<ApiProduct>(`/api/products/${id}`),
+    create: (payload: NewProductInput) =>
+      request<ApiProduct>('/api/products', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   },
 
   inventory: {
@@ -231,6 +312,20 @@ export const api = {
 
   transactions: {
     list: (limit = 100) => request<ApiTransaction[]>(`/api/transactions?limit=${limit}`),
+  },
+
+  suppliers: {
+    list: () => request<ApiSupplier[]>('/api/suppliers'),
+    get: (id: string) => request<ApiSupplier>(`/api/suppliers/${id}`),
+  },
+
+  purchases: {
+    list: (limit = 100) => request<ApiPurchase[]>(`/api/purchases?limit=${limit}`),
+    create: (supplierId: string, items: PurchaseItemInput[], notes?: string, status = 'pending') =>
+      request<ApiPurchase>('/api/purchases', {
+        method: 'POST',
+        body: JSON.stringify({ supplier_id: supplierId, items, notes, status }),
+      }),
   },
 
   auth: {
